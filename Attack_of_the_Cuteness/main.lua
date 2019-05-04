@@ -6,6 +6,14 @@
 
 -- housekeeping stuff
 
+physics = require("physics")
+require("MainScreen")
+require("Background")
+require("Enemy")
+require("Planet")
+physics.start()
+physics.setGravity( 0, 9.8 )
+
 display.setStatusBar(display.HiddenStatusBar)
 
 local centerX = display.contentCenterX
@@ -20,48 +28,41 @@ local score = 0
 local hitPlanet
 local planetDamage
 local planet
+local shipCollided
+local background
+local mainScreen
+local ClearMainScreenLoadNextScene
+local startGame
+local health = 5
+local shipTimer
+local enemyTime = 3500
+local decrementEnemyTime
+local shipSpawnTimer = 3000
 
-local function createPlayScreen()
-	local background = display.newImage("background.png")
-	background.y = 130
-	background.aplha = 0
-	background:addEventListener("tap", shipSmash)
-	
-	planet = display.newImage("planet.png")
-	planet.x = centerX
-	planet.y = display.contentHeight 
-	planet.alpha = 1
-	planet:addEventListener("tap", shipSmash)
-	--planet.numHits=
-	
-	transition.to(background, {time=2000, alpha=1, y=centerY, x=centerX})
 
-	local function showTitle()
-		gameTitle = display.newImage("gametitle.png")
-		gameTitle.alpha = 0
-		gameTitle:scale(4, 4)
-		transition.to(gameTitle, {time=500, alpha=1, xScale=1, yScale=1})
-		startGame()
-	end
-	
-	
-	transition.to(planet, {time=2000, alpha=1, y=centerY, x=centerX, onComplete=showTitle})
+function load()
+	background = newBackground()
+	mainScreen = newMainScreen()
+	mainScreen.text:addEventListener("tap", ClearMainScreenLoadNextScene)
 end
 
+function ClearMainScreenLoadNextScene(event)
+	print("clear screen called here")
+	display.remove(mainScreen)
+	startGame()
+	return true
+end
+
+
+
+
 function spawnEnemy()
-	
-		local enemy = display.newImage("beetleship.png")
-		enemy:addEventListener("tap", shipSmash)
-		
-		if(math.random(2) == 1) then
-			enemy.x = math.random(-100, -10)
-		else
-			enemy.y = math.random(display.contentWidth + 10, display.contentWidth + 100)
-		end
-		
-		enemy.y = math.random(display.contentHeight)
-		enemy.trans = transition.to(enemy, {x=centerX, y=centerY, time=3500, onComplete=hitPlanet})
-		
+	local enemy = newEnemy()
+	physics.addBody(enemy, "dynamic", {radius = 20})
+	enemy:addEventListener("tap", shipSmash)
+	enemy.collision = shipCollided
+	enemy:addEventListener("collision", enemy)
+	enemy.trans = transition.to(enemy, {x=centerX, y=centerY, time=enemyTime, onComplete=planetDamage})
 end
 
 function shipSmash(event)
@@ -71,52 +72,93 @@ function shipSmash(event)
 	transition.cancel(event.target.trans)
 	score = score + 28
 	scoreTxt.text = "Score: " .. score
-	spawnEnemy()
-	return true
+
+--	spawnEnemy()
 end
+
+
+function shipCollided(self, event)
+	if event.phase == "began" then
+		print("ship collided")
+		local obj = event.target
+		local otherObj = event.other
+		display.remove(obj)
+		audio.play(sndKill)
+		transition.cancel(event.target.trans)
+		score = score + 28
+		scoreTxt.text = "Score: " .. score
+
+		if otherObj.name == "bullet"  then
+			display.remove(otherObj)
+			transition.cancel(event.other.trans)
+			score = score + 28
+			scoreTxt.text = "Score: " .. score
+		end
+--		spawnEnemy()
+	end
+		return true
+end
+
 
 function startGame()
+	timer.resume(shipTimer)
+	timer.resume(enemyTimeTimer)
+	print("start Game was called")
 	score = 0
-	local text = display.newText("Tap here to start. Protect the planet!", 0, 0, "Helvetica", 24)
-	text.x = centerX
-	text.y = display.contentHeight - 30
-	text:setTextColor(255, 254, 0)
-	local function goAway(event)
+	planet = newPlanet()
+	physics.addBody(planet, "static")
+	planet.collision = planetDamage
+	planet:addEventListener("collision", planet)
+	scoreTxt = display.newText("Score: 0", 0, 0, "Helvetica", 22)
+	scoreTxt.x = centerX
+	scoreTxt.y = display.screenOriginY + 10
+	spawnEnemy()
+end
+
+--function hitPlanet(obj)
+--	display.remove(obj)
+--	planetDamage()
+--	audio.play(sndBlast)
+--end
+
+function planetDamage(event)
+--	if event.phase == "began" then
+		print ("planet damaged")
 		display.remove(event.target)
-		text = Nil
-		spawnEnemy()
-		display.remove(gameTitle)
-		scoreTxt = display.newText("Score: 0", 0, 0, "Helvetica", 22)
-		scoreTxt.x = centerX
-		scoreTxt.y = display.screenOriginY + 10
-		return true
-	end
-	
-	text:addEventListener("tap", goAway)
-	
+		audio.play(sndBlast)
+
+		local function backToNormal(obj)
+			planet.xScale = 1
+			planet.yScale = 1
+			planet.health = planet.health -1
+			enemyTime = 3500
+			shipSpawnTimer = 3000
+			print("planet health: ".. planet.health)
+			if(planet.health < 1) then
+				timer.cancel(shipTimer)
+				timer.cancel(enemyTimeTimer)
+			end
+		end
+		transition.to(planet, {time=200, xScale=1.2, yScale=1.2, alpha=1, onComplete=backToNormal})
+--	end
+--	return true
 end
 
-function hitPlanet(obj)
-	display.remove(obj)
-	planetDamage()
-	audio.play(sndBlast)
-end
-
-function planetDamage()
-	
-	local function goAway(obj)
-		planet.xScale = 1
-		planet.yScale = 1
-		--planet.alpha = planet.numHits = 10
-	end
-	
-	transition.to(planet, {time=200, xScale=1.2, yScale=1.2, alpha=1, onComplete=goAway})
-	
+function decrementEnemyTime()
+	enemyTime = enemyTime - 200
+	shipSpawnTimer = shipSpawnTimer - 100
+	print ("new speed: " .. enemyTime)
+	print ("new shipSpawnTimer: "..shipSpawnTimer)
 end
 
 
 
-createPlayScreen()
+load()
+
+shipTimer = timer.performWithDelay(3000, spawnEnemy, 0)
+enemyTimeTimer = timer.performWithDelay(2000, decrementEnemyTime, 0)
+timer.pause(shipTimer)
+timer.pause(enemyTimeTimer)
 
 
 
