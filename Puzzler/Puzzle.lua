@@ -24,7 +24,6 @@ function newPuzzle()
     local getAnswerBoxTray
     local displayInBoxes
     local shuffleTable
---    local gameUtils = utils.newUtils()
 
     self.answerGroup = {}
     self.answerTrayCharCount = 16
@@ -32,25 +31,6 @@ function newPuzzle()
     self.questions = {"hello", "bello", "trello", "kello"}
     self.answers = {"asdf123123", "asdf123123", "asdf123123", "asdf123123" }
     self.PuzzleSet = newPuzzleSet()
---        {
---        {
---            question = "hello",
---            answer = "asdf123123"
---        },
---        {
---            question = "bello",
---            answer = "asdf123123"
---        },
---        {
---            question = "trello",
---            answer = "asdf123123"
---        },
---        {
---            question = "kello",
---            answer = "asdf123123"
---        },
---
---    }
     self.totalHeight = display.contentHeight
     self.availableHeight =  self.totalHeight
     self.totalWidth = display.contentWidth
@@ -242,17 +222,6 @@ function newPuzzle()
                     print("proposed answer: "..proposedAnswer)
                     if proposedAnswer == self.currentAnswer then
                         print("we got a winner!!")
---                        local index = math.random(1, 4)
---                        local currentQuestion = self.questions[index]
---                        print("asking question: " .. currentQuestion)
---
---                        local currentAnswer = self.answers[index]
---                        print("answer: " .. currentAnswer .. " with length: " .. string.len(currentAnswer))
---                        local currentQuestion, currentAnswer = getNextQuestionAndAnswer()
---                        print("asking question: " .. currentQuestion)
---                        print("answer: " .. currentAnswer .. " with length: " .. string.len(currentAnswer))
---
---                        displayNewPuzzle(currentQuestion, currentAnswer)
                         timer.performWithDelay(1000, askNewPuzzle)
                     end
                 end
@@ -483,7 +452,6 @@ function newPuzzle()
 
         local answerTrayGroup = displayInBoxes(answerTrayBoxLocations, Nil, self.answerTrayGroupName)
         --setup answerBox don
---        answer:setFillColor(1, 1, 0)
 
         self.puzzleGroup.answerTrayGroup = answerTrayGroup
         self.puzzleGroup.charTrayGroup = charTrayGroup
